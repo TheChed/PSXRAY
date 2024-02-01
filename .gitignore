@@ -1,0 +1,17 @@
+Makefile
+*.dll
+*.o
+*.a
+*.lib
+algo.txt
+bin/
+Include/
+LINK
+err.cpp
+PSXMSFS
+*.exe
+.gitattributes
+*.aux
+*.log
+*.pdf
+_minted-PSXMSFS/

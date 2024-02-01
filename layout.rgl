@@ -1,0 +1,33 @@
+#
+# rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     20
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 0 -1 -1
+a 001 anchor01 0 224 1
+a 002 anchor02 0 336 1
+a 003 anchor03 0 40 1
+c 000 12 TextBox000 0 0 400 176 3 SAMPLE TEXT
+c 001 1 GroupBox001 0 0 400 104 1 IP ADDRESSES
+c 002 4 Label002 24 8 120 24 1 PSX Main Server:
+c 003 12 TextBox003 128 8 120 24 1 127.0.0.1
+c 004 4 Label004 24 40 120 24 1 PSX Boost Server:
+c 005 4 Label005 24 72 120 24 1 MSFS server:
+c 006 12 TextBox006 128 40 120 24 1 127.0.0.1
+c 007 12 TextBox007 128 72 120 24 1 127.0.0.1
+c 008 12 TextBox008 256 8 56 24 1 10747
+c 009 4 Label009 248 8 16 24 1 :
+c 010 12 TextBox010 256 40 56 24 1 10749
+c 011 4 Label011 248 40 16 24 1 :
+c 012 1 GroupBox012 0 0 400 128 2 Flags
+c 013 7 CheckBoxEx014 16 48 24 24 2 TCAS inject
+c 014 15 Spinner017 104 8 72 24 2 Log verbosity: 
+c 015 19 StatusBar018 0 120 400 12 2 SAMPLE TEXT
+c 016 7 CheckBoxEx017 208 48 24 24 2 PSX slave to MSFS
+c 017 7 CheckBoxEx018 16 88 24 24 2 Inject Elevation to MSFS
+c 018 7 CheckBoxEx018 208 88 24 24 2 Inhib crash detection
+c 019 4 Label019 184 8 208 24 2 1= Very Verbose. 3=Error only
