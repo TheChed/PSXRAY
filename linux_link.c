@@ -13,7 +13,7 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 #define GUI_LAYOUT_NAME_IMPLEMENTATION
-#include "linux_link.h"
+#include "gui.h"
 
 int main(int argc, char *argv[])
 {

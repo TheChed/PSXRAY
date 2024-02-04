@@ -48,7 +48,7 @@ typedef struct {
     bool CheckBoxEx017Checked;
     bool CheckBoxEx018Checked;
     bool CheckBoxEx019Checked;
-    bool Connected;
+    int Connected;
 
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
@@ -114,7 +114,6 @@ void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
 {
     if (state->Connected)
         GuiSetState(STATE_DISABLED);
-    GuiTextBox((Rectangle){5, 5, 400, 200}, state->TextBox000Text, 128, false);
     GuiGroupBox((Rectangle){5, 224, 400, 104}, "IP ADDRESSES");
     GuiLabel((Rectangle){24, 232, 120, 24}, "PSX Main Server:");
     if (GuiTextBox((Rectangle){128, 232, 120, 24}, state->TextBox003Text, 128, state->TextBox003EditMode))
@@ -138,14 +137,14 @@ void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
     GuiCheckBox((Rectangle){208, 384, 24, 24}, "PSX slave to MSFS", &state->CheckBoxEx017Checked);
     GuiCheckBox((Rectangle){16, 424, 24, 24}, "Inject Elevation to MSFS", &state->CheckBoxEx018Checked);
     GuiCheckBox((Rectangle){208, 424, 24, 24}, "Inhib crash detection", &state->CheckBoxEx019Checked);
-    GuiLabel((Rectangle){184, 344, 208, 24}, "1= Very Verbose. 3=Error only");
+    GuiLabel((Rectangle){184, 344, 208, 24}, "1= Very Verbose. 4=Error only");
     GuiSetState(STATE_NORMAL);
-    GuiLabel((Rectangle){5,469, 70, 20}, "Connected");
-   // GuiToggleSlider((Rectangle){ 60, 469, 100, 20 }, "OFF;ON",&state->Connected);
+    GuiLabel((Rectangle){5,469, 100, 20}, "Connected");
+    GuiTextBox((Rectangle){5, 5, 400, 200}, state->TextBox000Text, 128, false);
+    GuiToggleSlider((Rectangle){ 85, 469, 100, 20 }, "OFF;ON",&state->Connected);
     if (GuiButton((Rectangle){(float)GetScreenWidth() - 55, 469, 50, 20}, "Quit"))
         *exit = true;
     GuiStatusBar((Rectangle){0, (float)GetScreenHeight() - 20, (float)GetScreenWidth(), 20}, "This is a status bar");
-    GuiToggleSlider((Rectangle){ 75, 469, 100, 20 }, "OFF;ON",&state->Connected);
 }
 
 #endif // GUI_LAYOUT_NAME_IMPLEMENTATION
