@@ -113,8 +113,6 @@ void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
 {
     if (state->Connected)
         GuiSetState(STATE_DISABLED);
-
-
     GuiGroupBox((Rectangle){5, 224, 400, 104}, "IP ADDRESSES");
 
     GuiLabel((Rectangle){24, 232, 120, 24}, "PSX Main Server:");
