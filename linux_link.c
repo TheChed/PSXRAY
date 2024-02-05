@@ -29,17 +29,16 @@ int printLogBuffer(void *Param, GuiLayoutNameState *gui)
     uint64_t ID;
     char mess[128];
 
-
-        for (int i = 0; i < NB_LOGS; i++) {
-            ID = getLogID(D, i);
-            if (ID > printedLogs) {
-                strncpy(mess, getLogMessage(D, i), 128);
-                printf("Debug Id: %lld\tLog: %s\n", ID, mess);
-                strncpy(gui->TE_LOG, mess, 128);
-                printedLogs++;
-            }
+    for (int i = 0; i < NB_LOGS; i++) {
+        ID = getLogID(D, i);
+        if (ID > printedLogs) {
+            strncpy(mess, getLogMessage(D, i), 128);
+            printf("Debug Id: %lu\tLog: %s\n", ID, mess);
+            strncpy(gui->TE_LOG, mess, 128);
+            printedLogs++;
         }
-     return 0;
+    }
+    return 0;
 }
 int main(int argc, char *argv[])
 {
@@ -52,7 +51,7 @@ int main(int argc, char *argv[])
     SetExitKey(0);
 
     SetTargetFPS(FPSTARGET);
-    logMessage* D = initLogBuffer();
+    logMessage *D = initLogBuffer();
 
     GuiLayoutNameState state = InitGuiLayoutName();
     bool launched = false;
@@ -61,11 +60,11 @@ int main(int argc, char *argv[])
     {
         if (IsKeyPressed(KEY_ESCAPE))
             showExit = !showExit;
-  
+
         exitWindow = WindowShouldClose();
         BeginDrawing();
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-        printLogBuffer(D,&state);
+    //    printLogBuffer(D, &state);
         GuiLayoutName(&state, &showExit);
 
         if (state.Connected) {
@@ -75,11 +74,8 @@ int main(int argc, char *argv[])
                 main_launch();
                 launched = !launched;
             }
-        }
-        else
-        {
+        } else {
             launched = false;
-       
         }
 
         if (showExit) {
@@ -90,7 +86,7 @@ int main(int argc, char *argv[])
             else if (result == 1)
                 cleanup();
             state.Connected = false;
-                exitWindow = true;
+            exitWindow = true;
         }
 
         EndDrawing();

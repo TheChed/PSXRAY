@@ -6,7 +6,9 @@ Makefile
 algo.txt
 bin/
 Include/
-LINK
+linux_link
+lin
+lib*
 err.cpp
 PSXMSFS
 *.exe
