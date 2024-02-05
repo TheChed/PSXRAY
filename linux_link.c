@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "PSXMSFS.h"
+#include "mock.h"
 
 #define UNUSED(X) (void)((X))
 
@@ -17,7 +18,6 @@
 
 #include <stdint.h>
 
-#define NB_LOGS 20
 
 int printLogBuffer(void *Param, GuiLayoutNameState *gui)
 {
@@ -32,7 +32,7 @@ int printLogBuffer(void *Param, GuiLayoutNameState *gui)
     for (int i = 0; i < NB_LOGS; i++) {
         ID = getLogID(D, i);
         if (ID > printedLogs) {
-            strncpy(mess, getLogMessage(D, i), 128);
+           // strncpy(mess, getLogMessage(D, i), 128);
             printf("Debug Id: %lu\tLog: %s\n", ID, mess);
             strncpy(gui->TE_LOG, mess, 128);
             printedLogs++;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         exitWindow = WindowShouldClose();
         BeginDrawing();
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-    //    printLogBuffer(D, &state);
+            printLogBuffer(D, &state);
         GuiLayoutName(&state, &showExit);
 
         if (state.Connected) {
@@ -83,10 +83,11 @@ int main(int argc, char *argv[])
             int result = GuiMessageBox((Rectangle){(float)GetScreenWidth() / 2 - 125, (float)GetScreenHeight() / 2 - 50, 250, 100}, GuiIconText(ICON_EXIT, "Close Window"), "Do you really want to exit?", "YES;NO");
             if ((result == 0) || (result == 2))
                 showExit = false;
-            else if (result == 1)
+            else if (result == 1) {
                 cleanup();
-            state.Connected = false;
-            exitWindow = true;
+                state.Connected = false;
+                exitWindow = true;
+            }
         }
 
         EndDrawing();
