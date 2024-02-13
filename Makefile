@@ -10,10 +10,10 @@ lib:
 
 linux_link: $(OBJ) 
 	$(CC) $(OBJ) -o linux_link -L. -lraylib -lm -lmocklinux
+	cp *.{h,c} /home/stephan/NAS/TRANSFERT/SRC/PSXRAY
 
-%.o : %.c $(DEPS)
+%.o : %.c
 	$(CC) $(CFLAGS) -c $<
-	cp  $< /home/stephan/NAS/TRANSFERT/PSXMSFS/SRC/RAY
 
 clean:
 	rm -rf linux_link *.o *.so *.dll *.aux *.log *.pdf

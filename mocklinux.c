@@ -1,15 +1,15 @@
+#include "PSXMSFS.h"
 #include <stdint.h>
 #include <stdlib.h>
 
-int initialize(const char *MSFSIP, const char *PSXIP, int PSXPort, const char *BoostIP, int BoostPort)
+int initialize(FLAGS *)
 {
-    return -1;
+    return 0;
 }
 
-typedef struct FLAGS FLAGS;
-FLAGS *connectPSXMSFS(void)
+int connectPSXMSFS(FLAGS *f)
 {
-    return NULL;
+    return 0;
 }
 
 int main_launch(void)
@@ -23,7 +23,7 @@ int cleanup(void)
 
 typedef struct logMessage logMessage;
 
-logMessage *initLogBuffer(void)
+logMessage *getLogBuffer(int nblogs)
 {
     return NULL;
 }
@@ -31,7 +31,44 @@ char *getLogMessage(logMessage *D, int n)
 {
     return NULL;
 }
+int getLogLevel(logMessage *D, int n)
+{
+    return -1;
+}
 uint64_t getLogID(logMessage *D, int n)
 {
     return -1;
+}
+
+void freeLogBuffer(logMessage *D)
+{
+    return;
+}
+ FLAGS *initFlags(void)
+{
+    return NULL;
+}
+int updateFromIni(FLAGS *flags){
+    return 0;
+}
+servers getServersInfo(FLAGS *f){
+    servers S;
+    return S;
+}
+unsigned int getSwitch(FLAGS *f){
+    return 0;
+}
+void setLogVerbosity(FLAGS *f, LOG_LEVELS level){
+}  
+
+int getLogVerbosity(FLAGS *f){
+    return 0;
+}
+
+ACFT getACFTInfo(void){
+    ACFT A;
+    return A;
+}
+
+void setServersInfo(servers *S){
 }

@@ -2,8 +2,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "PSXMSFS.h"
 #include "mock.h"
+
+#ifdef _WIN32
+#define NOGDI
+#define NOUSER
+#include <windows.h>
+DWORD T;
+HANDLE H;
+#else
+#include <pthread.h>
+#define DWORD int
+#define WINAPI
+#endif
 
 #define UNUSED(X) (void)((X))
 
@@ -13,33 +26,83 @@
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
-#define GUI_LAYOUT_NAME_IMPLEMENTATION
 #include "gui.h"
 
+#include "style_dark.h"
 #include <stdint.h>
+#define NB_LOGS 8
+#define MAXLEN_DEBUG_MSG 8192
 
+char messages[NB_LOGS][MAXLEN_DEBUG_MSG];
 
-int printLogBuffer(void *Param, GuiLayoutNameState *gui)
+FLAGS *flags;
+
+DWORD WINAPI launchthread(void *Param)
+{
+    FLAGS *f = (FLAGS *)Param;
+    int connected;
+    connected = connectPSXMSFS(f);
+    return connected;
+}
+
+void printLogBuffer(void *Param, GuiLayoutNameState *gui)
 {
 
     logMessage *D = (logMessage *)Param;
 
-    static uint64_t printedLogs = 0;
-
+    static uint64_t oldLogID = 0;
+    static uint64_t count = 0;
     uint64_t ID;
-    char mess[128];
+    char *mess;
+    char buffer[4192] = {0};
+
 
     for (int i = 0; i < NB_LOGS; i++) {
+
+        int level = getLogLevel(D, i);
         ID = getLogID(D, i);
-        if (ID > printedLogs) {
-           // strncpy(mess, getLogMessage(D, i), 128);
-            printf("Debug Id: %lu\tLog: %s\n", ID, mess);
-            strncpy(gui->TE_LOG, mess, 128);
-            printedLogs++;
+        mess = getLogMessage(D, i);
+        if (oldLogID < ID) {               // there is a potential new log
+            if (level >= gui->LOG_VALUE) { // is it below our verbosity level ?
+                if (count < NB_LOGS) {
+                    strcpy(messages[count], mess);
+                } else {
+                    memmove(messages, messages + 1, (NB_LOGS - 1) * MAXLEN_DEBUG_MSG);
+                    strcpy(messages[NB_LOGS - 1], mess);
+                }
+                oldLogID = ID;
+                count++;
+            }
         }
     }
-    return 0;
+    if (count) {
+        gui->TE_LOG[0] = 0;
+        for (int i = 0; i < NB_LOGS; i++) {
+            if (messages[i]) {
+                if (i == 0)
+                    strncpy(buffer, messages[i], strlen(messages[i]));
+                else
+                    strncat(buffer, messages[i], strlen(messages[i]));
+                buffer[strlen(buffer)] = 10;
+            }
+        }
+        strncpy(gui->TE_LOG, buffer, 4191);
+    }
 }
+
+servers populateInfo(GuiLayoutNameState *state)
+{
+
+    servers S;
+    strncpy(S.PSXIP, state->TE_PSXMAIN, IP_LENGTH);
+    S.PSXPORT = strtol(state->TE_PSXPORT, NULL, 10);
+    strncpy(S.BOOSTIP, state->TE_PSXBOOST, IP_LENGTH);
+    S.BOOSTPORT = strtol(state->TE_BOOSTPORT, NULL, 10);
+    strncpy(S.MSFSIP, state->TE_MSFS, IP_LENGTH);
+
+    return S;
+}
+
 int main(int argc, char *argv[])
 {
     UNUSED(argc);
@@ -49,12 +112,33 @@ int main(int argc, char *argv[])
 
     InitWindow(SCREENWIDTH, SCREENHEIGHT, "PSXMSFS GUI interface");
     SetExitKey(0);
+    GuiLoadStyleDark();
 
     SetTargetFPS(FPSTARGET);
-    logMessage *D = initLogBuffer();
+    logMessage *D = getLogBuffer(NB_LOGS);
 
-    GuiLayoutNameState state = InitGuiLayoutName();
+    bool connecting = false;
+    bool connected = false;
     bool launched = false;
+
+
+    /*----------------------------
+     * Trying to read the ini file
+     *--------------------------*/
+
+    flags = initFlags();  // Fills in default values for the flags
+    updateFromIni(flags); // update values from INI file if present
+
+    /*----------------------------------------------
+     * Once we have the init flags, update the layout
+     *--------------------------------------------*/
+
+    GuiLayoutNameState state = InitGuiLayout(flags);
+
+    // LoadFont("NotoSerif-Medium.ttf")  // TTF font : Font data and atlas are generated directly from TTF
+    //  NOTE: We define a font base size of 32 pixels tall and up-to 250 characters
+    // Font fontTtf = LoadFontEx("NotoSerif-Medium.ttf", 32, 0, 250);
+    //  Font fontTtf = LoadFontEx("NotoSerif-ExtraBoldItalic.ttf", 32, 0, 250);
 
     while (!exitWindow) // Detect window close button or ESC key
     {
@@ -64,18 +148,65 @@ int main(int argc, char *argv[])
         exitWindow = WindowShouldClose();
         BeginDrawing();
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-            printLogBuffer(D, &state);
-        GuiLayoutName(&state, &showExit);
 
-        if (state.Connected) {
-            if (!launched) {
-                initialize("127.0.0.1", "127.0.0.1", 10747, "127.0.0.1", 10749);
-                connectPSXMSFS();
+
+        /*---------------------------
+         * Drawing the layout
+         *-------------------------*/
+        ACFT acft = getACFTInfo();
+        drawLayout(&state, &showExit, &acft, connecting, launched);
+
+        if (state.Connect) {
+        /*---------------------------
+         * Printing the logs
+         *-------------------------*/
+        printLogBuffer(D, &state);
+            if (!connecting && !connected) {
+
+                initialize(flags);
+                setLogVerbosity(flags, state.LOG_VALUE);
+                servers S = populateInfo(&state);
+                setServersInfo(&S);
+#ifdef _WIN32
+                H = CreateThread(NULL, 0, launchthread, flags, 0, &T);
+            }
+            DWORD retval;
+            GetExitCodeThread(H, &retval);
+            switch (retval) {
+            case STILL_ACTIVE:
+                strcpy(state.statusBarText, "Connecting.");
+                connecting = true;
+                state.Connect =true;
+                connected = false;
+                break;
+            case 0:
+                strcpy(state.statusBarText, "Connected.");
+                state.Connect =true;
+                connecting = false;
+                connected = true;
+                break;
+            case 1:
+                strcpy(state.statusBarText, "DISCONNUECTED.");
+                state.Connect =false;
+                connecting = false;
+                connected = false;
+                break;
+            }
+#else
+            }
+#endif
+            if (connected && !launched) {
+
                 main_launch();
-                launched = !launched;
+                launched = true;
             }
         } else {
-            launched = false;
+            if (launched) {
+                cleanup();
+                launched = false;
+                connecting = false;
+                connected = false;
+            }
         }
 
         if (showExit) {
@@ -85,7 +216,7 @@ int main(int argc, char *argv[])
                 showExit = false;
             else if (result == 1) {
                 cleanup();
-                state.Connected = false;
+                state.Connect = false;
                 exitWindow = true;
             }
         }
@@ -93,6 +224,7 @@ int main(int argc, char *argv[])
         EndDrawing();
     }
 
+    freeLogBuffer(D);
     CloseWindow();
     return 0;
 }

@@ -19,19 +19,18 @@
 *
 **********************************************************************************************/
 
+#include <stdio.h>
 #include "raylib.h"
 
+#include "PSXMSFS.h"
 // WARNING: raygui implementation is expected to be defined before including this header
 #undef RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
 #include <string.h> // Required for: strcpy()
 
-#ifndef GUI_LAYOUT_NAME_H
-#define GUI_LAYOUT_NAME_H
-
 typedef struct {
-    char TE_LOG[128];
+    char TE_LOG[4192];
     bool TE_LOGEdit;
     char TE_PSXMAIN[128];
     bool TE_PSXMAIN_EDIT;
@@ -44,78 +43,87 @@ typedef struct {
     char TE_BOOSTPORT[128];
     bool TE_BOOSTPORT_EDIT;
     bool CB_TCAS;
+    bool CB_ONLINE;
     int LOG_VALUE;
     bool CB_SLAVE;
     bool CB_ELEV;
     bool CB_CRASH;
-    int Connected;
+    int Connect;
+    char statusBarText[128];
 
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
 
 } GuiLayoutNameState;
 
-GuiLayoutNameState InitGuiLayoutName(void);
-void GuiLayoutName(GuiLayoutNameState *state, bool *exit);
-
-#endif // GUI_LAYOUT_NAME_H
+GuiLayoutNameState InitGuiLayout(FLAGS *flags);
+void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting, bool launched);
 
 /***********************************************************************************
  *
  *   GUI_LAYOUT_NAME IMPLEMENTATION
  *
  ************************************************************************************/
-#if defined(GUI_LAYOUT_NAME_IMPLEMENTATION)
 
 #include "raygui.h"
 
-//----------------------------------------------------------------------------------
-// Global Variables Definition
-//----------------------------------------------------------------------------------
-//...
-
-//----------------------------------------------------------------------------------
-// Internal Module Functions Definition
-//----------------------------------------------------------------------------------
-//...
-
-//----------------------------------------------------------------------------------
-// Module Functions Definition
-//----------------------------------------------------------------------------------
-GuiLayoutNameState InitGuiLayoutName(void)
+GuiLayoutNameState InitGuiLayout(FLAGS *flags)
 {
     GuiLayoutNameState state = {0};
 
-    strcpy(state.TE_LOG, "LOG MESSAGES");
-    strcpy(state.TE_PSXMAIN, "127.0.0.1");
+    servers S = getServersInfo(flags);
+    unsigned int switches = getSwitch(flags);
+
+    strcpy(state.TE_LOG, "");
+    strcpy(state.TE_PSXMAIN, S.PSXIP);
     state.TE_PSXMAIN_EDIT = false;
-    strcpy(state.TE_PSXBOOST, "127.0.0.1");
+    strcpy(state.TE_PSXBOOST, S.BOOSTIP);
     state.TE_PSXBOOST_EDIT = false;
-    strcpy(state.TE_MSFS, "127.0.0.1");
+    strcpy(state.TE_MSFS, S.MSFSIP);
     state.TE_MSFS_EDIT = false;
-    strcpy(state.TE_PSXPORT, "10747");
+    sprintf(state.TE_PSXPORT, "%d", S.PSXPORT);
     state.TE_PSXPORT_EDIT = false;
-    strcpy(state.TE_BOOSTPORT, "10749");
+    sprintf(state.TE_BOOSTPORT, "%d", S.BOOSTPORT);
     state.TE_BOOSTPORT_EDIT = false;
-    state.CB_TCAS = false;
-    state.LOG_VALUE = 0;
-    state.CB_SLAVE = false;
-    state.CB_ELEV = false;
-    state.CB_CRASH = false;
-    state.Connected = false;
+    state.CB_TCAS = (switches & F_TCAS);
+    state.LOG_VALUE = getLogVerbosity(flags);
+    state.CB_SLAVE = (switches & F_SLAVE);
+    state.CB_ELEV = (switches & F_INJECT);
+    state.CB_CRASH = (switches & F_INHIB);
+    state.CB_ONLINE = (switches & F_ONLINE);
+    state.statusBarText[0] = '\0';
+    state.Connect = 0;
 
     // Custom variables initialization
 
     return state;
 }
 
-void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
+void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting, bool launched)
 {
-    if (state->Connected)
-        GuiSetState(STATE_DISABLED);
-    GuiGroupBox((Rectangle){5, 224, 400, 104}, "IP ADDRESSES");
 
-    GuiLabel((Rectangle){24, 232, 120, 24}, "PSX Main Server:");
+    char statusbuff[128] = {0}, LAT, LONG;
+    double lat, longi, minlat, minlong;
+    LAT = A->latitude * 180 / PI > 0 ? 'N' : 'S';
+    LONG = A->longitude * 180 / PI > 0 ? 'E' : 'W';
+    lat = fabs(A->latitude);
+    longi = fabs(A->longitude);
+    minlat = (lat * 180 / PI - (int)(lat * 180 / PI)) * 60;
+    minlong = (longi * 180 / PI - (int)(longi * 180 / PI)) * 60;
+
+    if (launched) {
+        sprintf(statusbuff, "%c %02d %04.1f\t%c %03d %04.1f \t\tFltDeck Alt: %5d ft \t\t True Hdg: %03d", LAT, (int)(lat * 180 / PI), minlat, LONG, (int)(longi * 180 / PI), minlong, (int)(A->Alt), (int)(A->heading * 180 / PI));
+        GuiSetState(STATE_DISABLED);
+    } else {
+        if (connecting) {
+            strcpy(statusbuff, "CONNECTING...");
+            GuiSetState(STATE_DISABLED);
+        } else
+            strcpy(statusbuff, "DISCONNECTED");
+    }
+    GuiGroupBox((Rectangle){5, 224, 400, 104}, "SERVERS");
+
+    GuiLabel((Rectangle){16, 232, 120, 24}, "PSX Main Server:");
     if (GuiTextBox((Rectangle){128, 232, 120, 24}, state->TE_PSXMAIN, 128, state->TE_PSXMAIN_EDIT)) {
         state->TE_PSXMAIN_EDIT = !state->TE_PSXMAIN_EDIT;
     }
@@ -124,18 +132,18 @@ void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
         state->TE_PSXPORT_EDIT = !state->TE_PSXPORT_EDIT;
     }
 
-    GuiLabel((Rectangle){24, 264, 120, 24}, "PSX Boost Server:");
+    GuiLabel((Rectangle){16, 264, 120, 24}, "PSX Boost Server:");
     if (GuiTextBox((Rectangle){128, 264, 120, 24}, state->TE_PSXBOOST, 128, state->TE_PSXBOOST_EDIT)) {
         state->TE_PSXBOOST_EDIT = !state->TE_PSXBOOST_EDIT;
     }
 
-    if (GuiTextBox((Rectangle){256, 264, 56, 24}, state->TE_BOOSTPORT, 128,state->TE_BOOSTPORT_EDIT)) {
+    if (GuiTextBox((Rectangle){256, 264, 56, 24}, state->TE_BOOSTPORT, 128, state->TE_BOOSTPORT_EDIT)) {
         state->TE_BOOSTPORT_EDIT = !state->TE_BOOSTPORT_EDIT;
     }
 
-    GuiLabel((Rectangle){24, 296, 120, 24}, "MSFS server:");
+    GuiLabel((Rectangle){16, 296, 120, 24}, "MSFS server:");
 
-    if(GuiTextBox((Rectangle){128, 296, 120, 24}, state->TE_MSFS, 128,state->TE_MSFS_EDIT)){
+    if (GuiTextBox((Rectangle){128, 296, 120, 24}, state->TE_MSFS, 128, state->TE_MSFS_EDIT)) {
         state->TE_MSFS_EDIT = !state->TE_MSFS_EDIT;
     }
 
@@ -143,19 +151,18 @@ void GuiLayoutName(GuiLayoutNameState *state, bool *exit)
     GuiLabel((Rectangle){248, 264, 16, 24}, ":");
     GuiGroupBox((Rectangle){5, 336, 400, 128}, "Flags");
     GuiCheckBox((Rectangle){16, 384, 24, 24}, "TCAS inject", &state->CB_TCAS);
-    GuiSpinner((Rectangle){104, 344, 72, 24}, "Log verbosity: ", &state->LOG_VALUE, 1, 4, false);
-    GuiCheckBox((Rectangle){208, 384, 24, 24}, "PSX slave to MSFS", &state->CB_SLAVE);
+    GuiCheckBox((Rectangle){128, 384, 24, 24}, "ONLINE hack", &state->CB_ONLINE);
+    GuiCheckBox((Rectangle){240, 384, 24, 24}, "PSX slave to MSFS", &state->CB_SLAVE);
+    GuiSpinner((Rectangle){110, 344, 72, 24}, "Log verbosity: ", &state->LOG_VALUE, 1, 4, false);
+    GuiLabel((Rectangle){190, 344, 208, 24}, "1= Very Verbose to 4=Error only");
     GuiCheckBox((Rectangle){16, 424, 24, 24}, "Inject Elevation to MSFS", &state->CB_ELEV);
-    GuiCheckBox((Rectangle){208, 424, 24, 24}, "Inhib crash detection", &state->CB_CRASH);
-    GuiLabel((Rectangle){184, 344, 208, 24}, "1= Very Verbose. 3=Error only");
+    GuiCheckBox((Rectangle){240, 424, 24, 24}, "Inhib crash detection", &state->CB_CRASH);
     GuiSetState(STATE_NORMAL);
     GuiTextBox((Rectangle){5, 5, 400, 200}, state->TE_LOG, 128, false);
     GuiLabel((Rectangle){5, 469, 70, 20}, "Connected");
-    // GuiToggleSlider((Rectangle){ 60, 469, 100, 20 }, "OFF;ON",&state->Connected);
     if (GuiButton((Rectangle){(float)GetScreenWidth() - 55, 469, 50, 20}, "Quit"))
         *exit = true;
-    GuiStatusBar((Rectangle){0, (float)GetScreenHeight() - 20, (float)GetScreenWidth(), 20}, "This is a status bar");
-    GuiToggleSlider((Rectangle){75, 469, 100, 20}, "OFF;ON", &state->Connected);
-}
 
-#endif // GUI_LAYOUT_NAME_IMPLEMENTATION
+    GuiToggleSlider((Rectangle){75, 469, 100, 20}, "NO;YES", &state->Connect);
+    GuiStatusBar((Rectangle){0, (float)GetScreenHeight() - 20, (float)GetScreenWidth(), 20}, statusbuff);
+}
