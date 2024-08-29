@@ -56,8 +56,15 @@ typedef struct {
 
 } GuiLayoutNameState;
 
+#define TEXTLENGTH 4192
+typedef enum {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED
+} Status;
+
 GuiLayoutNameState InitGuiLayout(FLAGS *flags);
-void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting, bool launched);
+void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, Status status);
 
 /***********************************************************************************
  *
@@ -99,7 +106,7 @@ GuiLayoutNameState InitGuiLayout(FLAGS *flags)
     return state;
 }
 
-void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting, bool launched)
+void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, Status status)
 {
 
     char statusbuff[128] = {0}, LAT, LONG;
@@ -111,16 +118,23 @@ void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting,
     minlat = (lat * 180 / PI - (int)(lat * 180 / PI)) * 60;
     minlong = (longi * 180 / PI - (int)(longi * 180 / PI)) * 60;
 
-    if (launched) {
+    switch (status) {
+    case CONNECTED: {
         sprintf(statusbuff, "%c %02d %04.1f\t%c %03d %04.1f \t\tFltDeck Alt: %5d ft \t\t True Hdg: %03d", LAT, (int)(lat * 180 / PI), minlat, LONG, (int)(longi * 180 / PI), minlong, (int)(A->Alt), (int)(A->heading * 180 / PI));
         GuiSetState(STATE_DISABLED);
-    } else {
-        if (connecting) {
-            strcpy(statusbuff, "CONNECTING...");
-            GuiSetState(STATE_DISABLED);
-        } else
-            strcpy(statusbuff, "DISCONNECTED");
+        break;
     }
+    case CONNECTING: {
+        strcpy(statusbuff, "CONNECTING...");
+        GuiSetState(STATE_DISABLED);
+        break;
+    }
+    case DISCONNECTED: {
+        strcpy(statusbuff, "DISCONNECTED");
+        break;
+    }
+    }
+
     GuiGroupBox((Rectangle){5, 224, 400, 104}, "SERVERS");
 
     GuiLabel((Rectangle){16, 232, 120, 24}, "PSX Main Server:");
@@ -158,7 +172,7 @@ void drawLayout(GuiLayoutNameState *state, bool *exit, ACFT *A, bool connecting,
     GuiCheckBox((Rectangle){16, 424, 24, 24}, "Inject Elevation to MSFS", &state->CB_ELEV);
     GuiCheckBox((Rectangle){240, 424, 24, 24}, "Inhib crash detection", &state->CB_CRASH);
     GuiSetState(STATE_NORMAL);
-    GuiTextBox((Rectangle){5, 5, 400, 200}, state->TE_LOG, 128, false);
+    GuiTextBox((Rectangle){5, 5, 400, 200}, state->TE_LOG,TEXTLENGTH, false);
     GuiLabel((Rectangle){5, 469, 70, 20}, "Connected");
     if (GuiButton((Rectangle){(float)GetScreenWidth() - 55, 469, 50, 20}, "Quit"))
         *exit = true;

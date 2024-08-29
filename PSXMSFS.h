@@ -61,12 +61,12 @@ typedef struct servers {
  * Functions imported from the PSXMSFS DLL
  *--------------------------------*/
 
-LIBIMPORT FLAGS *initFlags(void);
-LIBIMPORT int updateFromIni(FLAGS *flags);
-LIBIMPORT int initialize(FLAGS *flags);
+LIBIMPORT FLAGS *createFlagsPSXMSFS(void);
+LIBIMPORT void deleteFlagsPSXMSFS(FLAGS *flags);
+LIBIMPORT int initializePSXMSFS(FLAGS *flags);
 LIBIMPORT int connectPSXMSFS(FLAGS *flags);
-LIBIMPORT int main_launch(void);
-LIBIMPORT int cleanup(void);
+LIBIMPORT int launchPSXMSFS(FLAGS *flags);
+LIBIMPORT int disconnectPSXMSFS(FLAGS *flags);
 
 /*----------------------------------
  * Log related functions
@@ -98,7 +98,16 @@ LIBIMPORT unsigned int getSwitch(FLAGS *f);
 LIBIMPORT void setSwitch(FLAGS *f, unsigned int flagvalue);
 LIBIMPORT int getLogVerbosity(FLAGS *f);
 LIBIMPORT void setLogVerbosity(FLAGS *f, LOG_LEVELS level);
-LIBIMPORT servers getServersInfo(FLAGS *f);
-LIBIMPORT void setServersInfo(servers *S);
+LIBIMPORT void setOnlineHack(FLAGS *f, unsigned int hack);
+LIBIMPORT void setTCASinject(FLAGS *f, unsigned int TCAS);
+LIBIMPORT void setElevationInject(FLAGS *f, unsigned int elev);
+LIBIMPORT void setPSXslave(FLAGS *f, unsigned int slave);
+LIBIMPORT void setCrashInhib(FLAGS *f, unsigned int crash);
+LIBIMPORT unsigned int getSwitch(FLAGS *f);
 LIBIMPORT ACFT getACFTInfo(void);
+LIBIMPORT servers getServersInfo(FLAGS *f);
+LIBIMPORT int setServersInfo(servers *S, FLAGS *f);
+LIBIMPORT int deleteLogFile(FLAGS *f);
+LIBIMPORT int getMSFSdelay(FLAGS *f);
+LIBIMPORT void setMSFSdelay(FLAGS *f, int delay);
 #endif

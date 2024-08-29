@@ -6,6 +6,7 @@
 #include "PSXMSFS.h"
 #include "mock.h"
 
+// test
 #ifdef _WIN32
 #define NOGDI
 #define NOUSER
@@ -37,15 +38,7 @@ char messages[NB_LOGS][MAXLEN_DEBUG_MSG];
 
 FLAGS *flags;
 
-DWORD WINAPI launchthread(void *Param)
-{
-    FLAGS *f = (FLAGS *)Param;
-    int connected;
-    connected = connectPSXMSFS(f);
-    return connected;
-}
-
-void printLogBuffer(void *Param, GuiLayoutNameState *gui)
+void printLogBuffer(void *Param, GuiLayoutNameState *gui, Status status)
 {
 
     logMessage *D = (logMessage *)Param;
@@ -54,9 +47,14 @@ void printLogBuffer(void *Param, GuiLayoutNameState *gui)
     static uint64_t count = 0;
     uint64_t ID;
     char *mess;
-    char buffer[4192] = {0};
+    char buffer[TEXTLENGTH] = {0};
 
-
+    if (status == DISCONNECTED) {
+        gui->TE_LOG[0] = '\0';
+        oldLogID = 0;
+        count = 0;
+        return;
+    }
     for (int i = 0; i < NB_LOGS; i++) {
 
         int level = getLogLevel(D, i);
@@ -75,6 +73,7 @@ void printLogBuffer(void *Param, GuiLayoutNameState *gui)
             }
         }
     }
+
     if (count) {
         gui->TE_LOG[0] = 0;
         for (int i = 0; i < NB_LOGS; i++) {
@@ -83,7 +82,8 @@ void printLogBuffer(void *Param, GuiLayoutNameState *gui)
                     strncpy(buffer, messages[i], strlen(messages[i]));
                 else
                     strncat(buffer, messages[i], strlen(messages[i]));
-                buffer[strlen(buffer)] = 10;
+                if (strlen(messages[i]))
+                    buffer[strlen(buffer)] = 10;
             }
         }
         strncpy(gui->TE_LOG, buffer, 4191);
@@ -115,30 +115,20 @@ int main(int argc, char *argv[])
     GuiLoadStyleDark();
 
     SetTargetFPS(FPSTARGET);
-    logMessage *D = getLogBuffer(NB_LOGS);
 
-    bool connecting = false;
-    bool connected = false;
-    bool launched = false;
+    Status status = DISCONNECTED;
 
-
+    logMessage *LogBuffer = NULL;
     /*----------------------------
      * Trying to read the ini file
      *--------------------------*/
 
-    flags = initFlags();  // Fills in default values for the flags
-    updateFromIni(flags); // update values from INI file if present
-
+    flags = createFlagsPSXMSFS(); // Fills in default values for the flags
     /*----------------------------------------------
      * Once we have the init flags, update the layout
      *--------------------------------------------*/
 
     GuiLayoutNameState state = InitGuiLayout(flags);
-
-    // LoadFont("NotoSerif-Medium.ttf")  // TTF font : Font data and atlas are generated directly from TTF
-    //  NOTE: We define a font base size of 32 pixels tall and up-to 250 characters
-    // Font fontTtf = LoadFontEx("NotoSerif-Medium.ttf", 32, 0, 250);
-    //  Font fontTtf = LoadFontEx("NotoSerif-ExtraBoldItalic.ttf", 32, 0, 250);
 
     while (!exitWindow) // Detect window close button or ESC key
     {
@@ -149,64 +139,51 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-
         /*---------------------------
          * Drawing the layout
          *-------------------------*/
         ACFT acft = getACFTInfo();
-        drawLayout(&state, &showExit, &acft, connecting, launched);
-
-        if (state.Connect) {
-        /*---------------------------
-         * Printing the logs
-         *-------------------------*/
-        printLogBuffer(D, &state);
-            if (!connecting && !connected) {
-
-                initialize(flags);
+        drawLayout(&state, &showExit, &acft, status);
+        switch (status) {
+        case DISCONNECTED: {
+            if (state.Connect) {
+                LogBuffer = getLogBuffer(NB_LOGS);
+                initializePSXMSFS(flags);
                 setLogVerbosity(flags, state.LOG_VALUE);
+                setOnlineHack(flags, state.CB_ONLINE);
+                setTCASinject(flags, state.CB_TCAS);
+                setElevationInject(flags, state.CB_ELEV);
+                setCrashInhib(flags, state.CB_CRASH);
+                setPSXslave(flags, state.CB_SLAVE);
                 servers S = populateInfo(&state);
-                setServersInfo(&S);
-#ifdef _WIN32
-                H = CreateThread(NULL, 0, launchthread, flags, 0, &T);
+                setServersInfo(&S, flags);
+                if (connectPSXMSFS(flags) == 0) {
+                    status = CONNECTING;
+                } else {
+                    state.Connect = false;
+                }
             }
-            DWORD retval;
-            GetExitCodeThread(H, &retval);
-            switch (retval) {
-            case STILL_ACTIVE:
-                strcpy(state.statusBarText, "Connecting.");
-                connecting = true;
-                state.Connect =true;
-                connected = false;
-                break;
-            case 0:
-                strcpy(state.statusBarText, "Connected.");
-                state.Connect =true;
-                connecting = false;
-                connected = true;
-                break;
-            case 1:
-                strcpy(state.statusBarText, "DISCONNUECTED.");
-                state.Connect =false;
-                connecting = false;
-                connected = false;
-                break;
-            }
-#else
-            }
-#endif
-            if (connected && !launched) {
+            break;
+        }
 
-                main_launch();
-                launched = true;
+        case CONNECTING: {
+            strncpy(state.TE_LOG, "Warming up", 4191);
+            launchPSXMSFS(flags);
+            status = CONNECTED;
+            break;
+        }
+        case CONNECTED: {
+            printLogBuffer(LogBuffer, &state, status);
+            if (!state.Connect) {
+                status = DISCONNECTED;
+                state.TE_LOG[0] = '\0';
+                disconnectPSXMSFS(flags);
+                freeLogBuffer(LogBuffer);
             }
-        } else {
-            if (launched) {
-                cleanup();
-                launched = false;
-                connecting = false;
-                connected = false;
-            }
+            break;
+        }
+        default:
+            break;
         }
 
         if (showExit) {
@@ -215,7 +192,9 @@ int main(int argc, char *argv[])
             if ((result == 0) || (result == 2))
                 showExit = false;
             else if (result == 1) {
-                cleanup();
+                disconnectPSXMSFS(flags);
+                deleteFlagsPSXMSFS(flags);
+                freeLogBuffer(LogBuffer);
                 state.Connect = false;
                 exitWindow = true;
             }
@@ -224,7 +203,6 @@ int main(int argc, char *argv[])
         EndDrawing();
     }
 
-    freeLogBuffer(D);
     CloseWindow();
     return 0;
 }

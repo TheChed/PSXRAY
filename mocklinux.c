@@ -2,7 +2,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-int initialize(FLAGS *)
+void deleteFlagsPSXMSFS(FLAGS *flags){
+    return;
+}
+int disconnectPSXMSFS(FLAGS *flags)
+{
+    return 0;
+}
+int initializePSXMSFS(FLAGS *F)
 {
     return 0;
 }
@@ -12,13 +19,13 @@ int connectPSXMSFS(FLAGS *f)
     return 0;
 }
 
-int main_launch(void)
+int launchPSXMSFS(FLAGS *f)
 {
     return -1;
 }
-int cleanup(void)
+void cleanup(void)
 {
-    return -1;
+    return;
 }
 
 typedef struct logMessage logMessage;
@@ -44,7 +51,7 @@ void freeLogBuffer(logMessage *D)
 {
     return;
 }
- FLAGS *initFlags(void)
+ FLAGS *createFlagsPSXMSFS(void)
 {
     return NULL;
 }
@@ -59,7 +66,12 @@ unsigned int getSwitch(FLAGS *f){
     return 0;
 }
 void setLogVerbosity(FLAGS *f, LOG_LEVELS level){
-}  
+}
+void setOnlineHack(FLAGS *f, unsigned  int hack){}
+void setElevationInject(FLAGS *f, unsigned  int elev){}
+void setTCASinject(FLAGS *f, unsigned  int TCAS){}
+void setCrashInhib(FLAGS *f, unsigned  int crash){}
+void setPSXslave(FLAGS *f, unsigned  int slave){}
 
 int getLogVerbosity(FLAGS *f){
     return 0;
@@ -70,5 +82,6 @@ ACFT getACFTInfo(void){
     return A;
 }
 
-void setServersInfo(servers *S){
+int setServersInfo(servers *S, FLAGS *f){
+    return 0;
 }
